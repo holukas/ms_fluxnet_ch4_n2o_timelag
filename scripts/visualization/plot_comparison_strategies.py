@@ -39,7 +39,7 @@ PRECIPITATION_DATE = "2021-08-16"
 YLIM = (0, 5.1)
 DPI = 300
 
-COLOR_EDDYPRO = "#0072B2"   # Blue — EddyPro (CM)
+COLOR_EDDYPRO = "#0072B2"  # Blue — EddyPro (CM)
 COLOR_PREFILTER = "#E05C2A"  # Orange — PWB pre-filtered
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -161,9 +161,11 @@ axes = {
 # ── panel definitions ─────────────────────────────────────────────────────────
 PANEL_DEFS = [
     ("CH4", "ep", ds_eddypro, COLOR_EDDYPRO, "a", "CH$_4$ — " + FILE_EDDYPRO["label"], True, False, True),
-    ("CH4", "pf", ds_prefiltered, COLOR_PREFILTER, "b", "CH$_4$ — PWB (Vitale et al., 2024, pre-filtered)", False, False, True),
+    ("CH4", "pf", ds_prefiltered, COLOR_PREFILTER, "b", "CH$_4$ — PWB (Vitale et al., 2024, pre-filtered)", False,
+     False, True),
     ("N2O", "ep", ds_eddypro, COLOR_EDDYPRO, "c", "N$_2$O — " + FILE_EDDYPRO["label"], True, True, False),
-    ("N2O", "pf", ds_prefiltered, COLOR_PREFILTER, "d", "N$_2$O — PWB (Vitale et al., 2024, pre-filtered)", False, True, False),
+    ("N2O", "pf", ds_prefiltered, COLOR_PREFILTER, "d", "N$_2$O — PWB (Vitale et al., 2024, pre-filtered)", False, True,
+     False),
 ]
 
 # ── event lines ───────────────────────────────────────────────────────────────
