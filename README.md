@@ -33,7 +33,7 @@ uv sync
 uv run python plot.py
 ```
 
-For detailed instructions and workflow, see [CLAUDE.md](CLAUDE.md).
+For detailed instructions and workflow, see [CLAUDE.md](docs/CLAUDE.md).
 
 ## Input & Output
 
