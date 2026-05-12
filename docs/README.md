@@ -1,18 +1,21 @@
-# Time Lag Detection for Closed-Path Eddy Covariance Measurements
+# Time Lag Detection for Eddy Covariance Measurements
 
-Detects time lags in closed-path gas analyzer measurements using the pre-whitening with block-bootstrap (PWB) method — an improvement over standard cross-correlation for weak-signal cases.
+Detects time lags between vertical wind and scalar concentrations in eddy covariance flux measurements using the pre-whitening with block-bootstrap (PWB) method from Vitale et al. (2024). Designed for weak-signal cases where standard cross-correlation fails.
 
 ## The Problem
 
-Closed-path analyzers measure gases through tubing, introducing a physical delay between sampling and detection. Standard cross-correlation works well for strong signals but fails on weak ones. When flux correlations are near zero (typical for trace gases), multiple spurious peaks appear with similar heights, leading to incorrect lags and biased flux estimates.
+Gas analyzers (especially closed-path systems) introduce physical delays via tubing or optical path differences. Scalar time series also lag due to instrumental response time. Standard cross-correlation works well for strong signals but struggles when flux correlations are near zero. With weak signals, multiple spurious correlation peaks appear with similar heights, making it impossible to identify the true lag by eye, leading to incorrect lag estimates and systematically biased flux calculations.
 
-## How PWB Works
+## The Solution: PWB (Vitale et al., 2024)
 
-1. Pre-whiten the time series (filter out autocorrelation via AR model)
-2. Block-bootstrap resample 99 times to quantify lag uncertainty
-3. Use S1/S2/S3 logic to accept reliable lags and reject artifacts
+The pre-whitening with block-bootstrap method improves lag detection on weak signals:
 
-Output: detected lag, 95% confidence interval (HDI), and a reliability flag.
+1. **Pre-whiten** — Filter out autocorrelation from each time series via AR model
+2. **Block-bootstrap** — Resample 99 times in ~20-step blocks to preserve short-timescale structure
+3. **Quantify uncertainty** — Extract lag from the mode of bootstrap distribution; 95% HDI width indicates confidence
+4. **Apply S1/S2/S3 logic** — Accept S1 (high confidence), accept S2 (within continuity window), reject S3 (spurious)
+
+Output: detected lag, 95% highest-density interval (HDI), and reliability flag per 30-min window.
 
 ## Running It
 
@@ -34,9 +37,9 @@ For detailed instructions and workflow, see [CLAUDE.md](CLAUDE.md).
 
 ## Input & Output
 
-**Input**: 30-minute windows of high-frequency eddy covariance data at ≥20 Hz sampling. Wind components must be rotation-corrected (planar fit or double rotation). Includes sonic temperature and gas concentrations (CH₄, N₂O, or both). PWB calculates the cross-correlation between turbulent fluctuations of the vertical wind (w') and scalar (e.g., N₂O'), obtained via Reynolds decomposition.
+**Input**: 30-minute windows of high-frequency eddy covariance data (≥20 Hz sampling). Includes rotation-corrected wind components (U, V, W via planar-fit or double-rotation), sonic temperature, and scalar concentrations (e.g., CH₄, N₂O). The algorithm computes cross-correlation between vertical wind turbulent fluctuations (w') and scalar fluctuations (e.g., c') via Reynolds decomposition.
 
-**Output**: CSV with detected lag, HDI bounds, and S1/S2/S3 flags for each window. See [CLAUDE.md](CLAUDE.md#understanding-the-output) for detailed column descriptions.
+**Output**: CSV with detected lag, 95% HDI bounds (uncertainty), correlation magnitude, and S1/S2/S3 reliability flags. One row per 30-min averaging window. See [CLAUDE.md](CLAUDE.md#understanding-the-output) for detailed column descriptions.
 
 ## References
 
