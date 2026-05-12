@@ -42,10 +42,10 @@ library(RFlux)
 # ------------------------------------------------------------------------------
 part <- 5   # <-- change this number to switch between dataset parts
 
-folder_path      <- sprintf("03-rotated_data_from_eddypro_level5_part%d", part)
-output_csv       <- sprintf("tlag_results_part%d.csv", part)
-plot_dir         <- "tlag_plots"
-checkpoint_file  <- sprintf("tlag_results_checkpoint_part%d.rds", part)
+folder_path      <- sprintf("input/03-rotated_data_from_eddypro_level5_part%d", part)
+output_csv       <- sprintf("output/tlag_results_part%d.csv", part)
+plot_dir         <- "output/tlag_plots"
+checkpoint_file  <- sprintf("output/tlag_results_checkpoint_part%d.rds", part)
 file_pattern     <- "\\.txt$"
 mfreq            <- 20    # Hz
 

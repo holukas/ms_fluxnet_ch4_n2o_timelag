@@ -37,7 +37,7 @@ renv/
 packrat/
 *_cache/
 *_files/
-/info/Rflux_source_code
+/references/Rflux_source_code
 
 # Virtual environments
 .venv

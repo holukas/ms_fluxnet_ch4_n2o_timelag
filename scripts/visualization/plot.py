@@ -16,22 +16,32 @@ from scipy.stats import gaussian_kde
 # ══════════════════════════════════════════════════════════════════════════════
 #  CONFIGURATION
 # ══════════════════════════════════════════════════════════════════════════════
-FILE_EDDYPRO = {
+FILE1 = {
     "label": "CM [0–5 s, |cov| max]",
     "path": "OPENLAG-5s_2021_2_LGR_eddypro_CH-CHA_FR-20240725-121331_fluxnet_2024-07-25T121333_adv.csv",
 }
 
-FILE_PREFILTERED = {
+FILE2 = {
     "label": "PWB (Vitale et al., 2024)",
     "paths": [
-        "../output/tlag_results_prefiltered_all.csv",
+        "../../output/tlag_results_part1.csv",
+        "../../output/tlag_results_part2.csv",
+        "../../output/tlag_results_part3.csv",
+        "../../output/tlag_results_part4.csv",
+        "../../output/tlag_results_part5.csv",
+        "../../output/tlag_results_part6.csv",
+        "../../output/tlag_results_part7.csv",
     ],
     "ts_col": 0,
     "ts_pattern": r"(\d{8}-\d{4})",
     "ts_format": "%Y%m%d-%H%M",
+    "cols": {
+        "CH4_TLAG_ACTUAL": "ch4_tlag_sec",
+        "N2O_TLAG_ACTUAL": "n2o_tlag_sec",
+    },
 }
 
-SAVE_PATH = "timelags_strategies_comparison.png"
+SAVE_PATH = "timelags.png"
 JITTER = 0.06
 TILLAGE_DATE = "2021-08-20"
 FERTILIZATION_DATE = "2021-07-29"
@@ -39,8 +49,8 @@ PRECIPITATION_DATE = "2021-08-16"
 YLIM = (0, 5.1)
 DPI = 300
 
-COLOR_EDDYPRO = "#0072B2"   # Blue — EddyPro (CM)
-COLOR_PREFILTER = "#E05C2A"  # Orange — PWB pre-filtered
+COLOR_F1 = "#0072B2"  # Wong blue  — CM
+COLOR_F2 = "#E05C2A"  # coral-orange — PWB
 # ══════════════════════════════════════════════════════════════════════════════
 
 # ── font ──────────────────────────────────────────────────────────────────────
@@ -88,14 +98,14 @@ plt.rcParams.update({
 
 
 # ── load ──────────────────────────────────────────────────────────────────────
-def load_eddypro(cfg):
+def load_file1(cfg):
     df = pd.read_csv(cfg["path"], na_values=[-9999],
                      usecols=["TIMESTAMP_END", "CH4_TLAG_ACTUAL", "N2O_TLAG_ACTUAL"])
     df["timestamp"] = pd.to_datetime(df["TIMESTAMP_END"], format="%Y%m%d%H%M")
     return df.sort_values("timestamp").reset_index(drop=True)
 
 
-def load_prefiltered(cfg):
+def load_file2(cfg):
     frames = []
     for path in cfg["paths"]:
         df = pd.read_csv(path, na_values=[-9999])
@@ -106,13 +116,14 @@ def load_prefiltered(cfg):
             .apply(lambda s: pd.to_datetime(s, format=cfg["ts_format"])
             if pd.notna(s) else pd.NaT)
         )
+        df = df.rename(columns={v: k for k, v in cfg["cols"].items()})
         frames.append(df)
     merged = pd.concat(frames, ignore_index=True).drop_duplicates(subset="timestamp")
     return merged.sort_values("timestamp").reset_index(drop=True)
 
 
-ds_eddypro = load_eddypro(FILE_EDDYPRO)
-ds_prefiltered = load_prefiltered(FILE_PREFILTERED)
+ds1 = load_file1(FILE1)
+ds2 = load_file2(FILE2)
 
 
 # ── KDE helper ────────────────────────────────────────────────────────────────
@@ -126,7 +137,7 @@ def smooth_kde(series, n=500):
 rng = np.random.default_rng(42)
 
 # ── global x-limits ───────────────────────────────────────────────────────────
-_all_ts = list(ds_eddypro["timestamp"].dropna()) + list(ds_prefiltered["timestamp"].dropna())
+_all_ts = list(ds1["timestamp"].dropna()) + list(ds2["timestamp"].dropna())
 x_min, x_max = min(_all_ts), max(_all_ts)
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -149,27 +160,27 @@ gs = gridspec.GridSpec(
 ax_master = fig.add_subplot(gs[0, 0])
 
 axes = {
-    ("CH4", "ep"): (ax_master, fig.add_subplot(gs[0, 1], sharey=ax_master)),
-    ("CH4", "pf"): (fig.add_subplot(gs[0, 3], sharex=ax_master, sharey=ax_master),
+    ("CH4", "f1"): (ax_master, fig.add_subplot(gs[0, 1], sharey=ax_master)),
+    ("CH4", "f2"): (fig.add_subplot(gs[0, 3], sharex=ax_master, sharey=ax_master),
                     fig.add_subplot(gs[0, 4], sharey=ax_master)),
-    ("N2O", "ep"): (fig.add_subplot(gs[1, 0], sharex=ax_master, sharey=ax_master),
+    ("N2O", "f1"): (fig.add_subplot(gs[1, 0], sharex=ax_master, sharey=ax_master),
                     fig.add_subplot(gs[1, 1], sharey=ax_master)),
-    ("N2O", "pf"): (fig.add_subplot(gs[1, 3], sharex=ax_master, sharey=ax_master),
+    ("N2O", "f2"): (fig.add_subplot(gs[1, 3], sharex=ax_master, sharey=ax_master),
                     fig.add_subplot(gs[1, 4], sharey=ax_master)),
 }
 
 # ── panel definitions ─────────────────────────────────────────────────────────
 PANEL_DEFS = [
-    ("CH4", "ep", ds_eddypro, COLOR_EDDYPRO, "a", "CH$_4$ — " + FILE_EDDYPRO["label"], True, False, True),
-    ("CH4", "pf", ds_prefiltered, COLOR_PREFILTER, "b", "CH$_4$ — PWB (Vitale et al., 2024, pre-filtered)", False, False, True),
-    ("N2O", "ep", ds_eddypro, COLOR_EDDYPRO, "c", "N$_2$O — " + FILE_EDDYPRO["label"], True, True, False),
-    ("N2O", "pf", ds_prefiltered, COLOR_PREFILTER, "d", "N$_2$O — PWB (Vitale et al., 2024, pre-filtered)", False, True, False),
+    ("CH4", "f1", ds1, COLOR_F1, "a", "CH$_4$ \u2014 " + FILE1["label"], True,  False, True),
+    ("CH4", "f2", ds2, COLOR_F2, "b", "CH$_4$ \u2014 " + FILE2["label"], False, False, True),
+    ("N2O", "f1", ds1, COLOR_F1, "c", "N$_2$O \u2014 " + FILE1["label"], True,  True,  False),
+    ("N2O", "f2", ds2, COLOR_F2, "d", "N$_2$O \u2014 " + FILE2["label"], False, True,  False),
 ]
 
 # ── event lines ───────────────────────────────────────────────────────────────
 EVENTS = [
-    (TILLAGE_DATE, "Tillage", "-", "black", "right"),
-    (FERTILIZATION_DATE, "Fertilization", ":", "black", "right"),
+    (TILLAGE_DATE,       "Tillage",       "-",  "black", "right"),
+    (FERTILIZATION_DATE, "Fertilization", ":",  "black", "right"),
     (PRECIPITATION_DATE, "Precipitation", "--", "black", "left"),
 ]
 
@@ -188,18 +199,12 @@ def draw_events(ax, show_labels):
 
 
 # ── main plot loop ────────────────────────────────────────────────────────────
-for gas, strat, data, color, letter, panel_label, show_ylabel, show_xlabel, show_event_lbl in PANEL_DEFS:
-    if strat == "ep":
-        col = "CH4_TLAG_ACTUAL" if gas == "CH4" else "N2O_TLAG_ACTUAL"
-    elif strat == "std":
-        col = f"ch4_pwbopt_std" if gas == "CH4" else f"n2o_pwbopt_std"
-    else:  # "pf"
-        col = f"ch4_pwbopt_prefilter" if gas == "CH4" else f"n2o_pwbopt_prefilter"
+for gas, fkey, ds, color, letter, panel_label, show_ylabel, show_xlabel, show_event_lbl in PANEL_DEFS:
+    col = "CH4_TLAG_ACTUAL" if gas == "CH4" else "N2O_TLAG_ACTUAL"
+    ax_s, ax_k = axes[(gas, fkey)]
 
-    ax_s, ax_k = axes[(gas, strat)]
-
-    series = data[col].dropna()
-    ts = data.loc[series.index, "timestamp"]
+    series = ds[col].dropna()
+    ts = ds.loc[series.index, "timestamp"]
 
     # scatter
     jittered = series.values + rng.uniform(-JITTER, JITTER, size=len(series))
@@ -265,12 +270,12 @@ for gas, strat, data, color, letter, panel_label, show_ylabel, show_xlabel, show
         for lbl in ax_k.get_xticklabels():
             lbl.set_ha("center")
 
-# ── shared legend ─────────────────────────────────────────────────────────────
+# ── shared legend: CM (blue) | PWB (orange) | Mode (black dashed) ─────────────
 shared_handles = [
-    plt.scatter([], [], marker="o", color=COLOR_EDDYPRO, s=20, linewidths=0,
-                label=FILE_EDDYPRO["label"]),
-    plt.scatter([], [], marker="o", color=COLOR_PREFILTER, s=20, linewidths=0,
-                label="PWB (Vitale et al., 2024, pre-filtered)"),
+    plt.scatter([], [], marker="o", color=COLOR_F1, s=20, linewidths=0,
+                label=FILE1["label"]),
+    plt.scatter([], [], marker="o", color=COLOR_F2, s=20, linewidths=0,
+                label=FILE2["label"]),
     plt.Line2D([0], [0], color="black", lw=1.2, ls="--",
                label="Mode"),
 ]

@@ -16,32 +16,33 @@ Output: detected lag, 95% confidence interval (HDI), and a reliability flag.
 
 ## Running It
 
-R analysis:
+R time lag detection:
 
 ```bash
-source("ms_fluxnet_ch4_n2o_timelag.R")
+source("scripts/01_tlag_detection_pwb.R")
 ```
 
-Python plots:
+Python visualization:
 
 ```bash
+cd scripts/visualization
 uv sync
-uv run python comparison_python_plot/plot.py
+uv run python plot.py
 ```
 
-For implementation details, see [CLAUDE.md](CLAUDE.md).
+For detailed instructions and workflow, see [CLAUDE.md](CLAUDE.md).
 
 ## Input & Output
 
 **Input**: 30-minute windows of high-frequency eddy covariance data at ≥20 Hz sampling. Wind components must be rotation-corrected (planar fit or double rotation). Includes sonic temperature and gas concentrations (CH₄, N₂O, or both). PWB calculates the cross-correlation between turbulent fluctuations of the vertical wind (w') and scalar (e.g., N₂O'), obtained via Reynolds decomposition.
 
-**Output**: CSV with detected lag, HDI bounds, and S1/S2/S3 flags for each window. See `info_tlag_results.md` for column descriptions.
+**Output**: CSV with detected lag, HDI bounds, and S1/S2/S3 flags for each window. See [CLAUDE.md](CLAUDE.md#understanding-the-output) for detailed column descriptions.
 
 ## References
 
 - Vitale et al. (2024): A pre-whitening with block-bootstrap cross-correlation procedure for temporal alignment of data sampled by eddy covariance systems. *Environmental and Ecological Statistics* 31:219–244. [10.1007/s10651-024-00615-9](https://doi.org/10.1007/s10651-024-00615-9)
 - RFlux package: https://github.com/icos-etc/RFlux (Vitale et al. 2022)
-- See `info/` for full papers and RFlux manual.
+- See `references/` folder for full papers and RFlux manual.
 
 ## Requirements
 

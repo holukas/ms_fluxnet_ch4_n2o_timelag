@@ -30,22 +30,33 @@ Here's the directory tree:
 
 ```
 .
-├── 01_tlag_detection_pwb.R              # Time lag detection (PWB + S1/S2/S3)
-├── 02_tlag_compare_pwbopt_strategies.R  # Compare standard vs pre-filtered approach
-├── comparison_python_plot/
-│   ├── plot.py                          # Reads R output, makes comparison plots
-│   ├── tlag_results_partN.csv           # R generates these (7 parts, Sept 2021 data)
-│   └── *.csv                            # EddyPro reference files for comparison
-├── 03-rotated_data_from_eddypro_level5_partN/  # Input data (rotation-corrected)
-│   └── *.txt                            # High-frequency wind + scalar data (20 Hz)
-├── tlag_plots/                          # Generated diagnostic plots (PDF)
-├── info/                                # Reference documentation
+├── scripts/
+│   ├── 01_tlag_detection_pwb.R          # Time lag detection (PWB + S1/S2/S3)
+│   ├── 02_tlag_compare_pwbopt_strategies.R  # Compare standard vs pre-filtered approach
+│   └── visualization/
+│       ├── plot.py                      # EddyPro vs PWB comparison
+│       └── plot_comparison_strategies.py # EddyPro vs PWB pre-filtered
+├── input/
+│   ├── 01-raw_data_ascii/               # Original ASCII data files
+│   ├── 02-run_eddypro_for_rotation/     # EddyPro config and processing notes
+│   ├── 03-rotated_data_from_eddypro_level5_part[1-7]/  # Rotation-corrected data
+│   │   └── *.txt                        # High-frequency wind + scalar (20 Hz)
+│   └── README.md                        # Input data documentation
+├── output/
+│   ├── tlag_results_part[1-7].csv       # Script 1 output
+│   ├── tlag_results_prefiltered_all.csv # Script 2 output (combined)
+│   ├── tlag_results_prefiltered_part[1-7].csv  # Script 2 output (per-part)
+│   └── tlag_plots/                      # Diagnostic plots (PDF)
+├── references/                          # Reference materials
 │   ├── RFlux-manual.pdf
-│   ├── Vitale et al. - 2024 - ...pdf
+│   ├── Vitale_et_al_2024.pdf
 │   └── Rflux_source_code/               # RFlux source (v3.1.0)
+├── docs/
+│   ├── CLAUDE.md                        # This file
+│   ├── README.md                        # Project overview
+│   └── WORKFLOW.md                      # Workflow diagrams
 ├── renv.lock                            # R dependency snapshot
-├── pyproject.toml                       # Python dependencies (uv)
-└── info_tlag_results.md                 # Output column definitions
+└── pyproject.toml                       # Python dependencies (uv)
 ```
 
 ---
@@ -67,8 +78,8 @@ Uses **uv** for speed. Python ≥ 3.9, with pandas, matplotlib, scipy, numpy for
 ### Step 1: Time Lag Detection (01_tlag_detection_pwb.R)
 
 ```bash
-# In R or RStudio:
-source("01_tlag_detection_pwb.R")
+# In R or RStudio (from project root):
+source("scripts/01_tlag_detection_pwb.R")
 ```
 
 This script:
@@ -93,29 +104,24 @@ This script:
 - `ch4_pwbopt_sec` — final recommended lag (after S1/S2/S3)
 - `ch4_flag` — reliability flag (S1_optimal, S2_optimal, or S3_unreliable)
 
-### Step 2 (Optional): Compare PWBOPT Strategies (02_tlag_compare_pwbopt_strategies.R)
+### Step 2 (Optional): Test Pre-filtering Strategy (02_tlag_compare_pwbopt_strategies.R)
 
 ```bash
-# In R or RStudio (after running script 1):
-source("02_tlag_compare_pwbopt_strategies.R")
+# In R or RStudio (from project root, after running script 1):
+source("scripts/02_tlag_compare_pwbopt_strategies.R")
 ```
 
-This script tests an alternative approach: **pre-filter high-uncertainty lags before applying S1/S2/S3**. Compares:
+This script tests whether pre-filtering high-uncertainty lags before applying S1/S2/S3 improves reliability. The approach:
 
-- **Standard** (baseline): Apply S1/S2/S3 to all detected lags
-- **Pre-filtered** (alternative): Remove lags with HDI > threshold (default 1.0 s), then apply S1/S2/S3
-
-**Workflow**:
-1. Reads `output/tlag_results_part[1-7].csv` (from script 1)
-2. For each part:
-   - Applies standard S1/S2/S3 to all raw lags
-   - Pre-filters lags with HDI > threshold (default 1.0 s)
-   - Applies S1/S2/S3 to pre-filtered lags
-   - Compares results side-by-side
-3. Outputs comparison CSVs with both approaches
+1. Reads all parts from `output/tlag_results_part[1-7].csv` (from script 1)
+2. Combines parts to maintain temporal continuity
+3. Applies S1/S2/S3 twice:
+   - **Standard**: All detected lags → S1/S2/S3
+   - **Pre-filtered**: Remove lags with HDI > threshold (default 1.0 s) → S1/S2/S3
+4. Outputs combined results with both approaches for comparison
 
 **Output columns** (example for CH4):
-- `ch4_pwbopt_std`, `ch4_flag_std` — Standard approach
+- `ch4_pwbopt_std`, `ch4_flag_std` — Standard approach (all lags)
 - `ch4_pwbopt_prefilter`, `ch4_flag_prefilter` — Pre-filtered approach
 - Same for N2O
 
@@ -124,15 +130,16 @@ This script tests an alternative approach: **pre-filter high-uncertainty lags be
 - `parts_to_process` (line 12): Which parts to process (default 1:7)
 
 **Outputs**:
-- `output/tlag_results_prefiltered_part[1-7].csv` — Comparison results
-- Console summary: % reliable for each approach, # filtered out
+- `output/tlag_results_prefiltered_all.csv` — Combined results (all parts, both approaches)
+- `output/tlag_results_prefiltered_part[1-7].csv` — Per-part results for reference
+- Console summary: % reliable for each approach, # filtered out per gas
 
 ### Step 3: Visualization
 
 #### Option A: Compare PWB vs. EddyPro (Original Plot)
 
 ```bash
-cd comparison_python_plot
+cd scripts/visualization
 uv sync
 uv run python plot.py
 ```
@@ -150,21 +157,22 @@ Generates `timelags.png` and `timelags.pdf`:
 - `JITTER`, `YLIM`, `DPI`: Plot styling
 - Event dates: `TILLAGE_DATE`, `FERTILIZATION_DATE`, `PRECIPITATION_DATE`
 
-#### Option B: Compare Standard vs. Pre-filtered Strategies
+#### Option B: Compare EddyPro vs. PWB Pre-filtered
 
 ```bash
-cd comparison_python_plot
+cd scripts/visualization
 uv run python plot_comparison_strategies.py
 ```
 
 Generates `timelags_strategies_comparison.png`:
-- 2×2 grid: CH4 & N2O × Standard & Pre-filtered
+- 2×2 grid: CH4 & N2O × EddyPro & PWB pre-filtered
 - Same layout as plot.py (scatter + KDE)
-- Color-coded: blue (standard), orange (pre-filtered)
+- Color-coded: blue (EddyPro), orange (PWB pre-filtered)
 - Event overlays + mode lines
 
 **Configuration** (edit at top of `plot_comparison_strategies.py`):
-- `FILE_CONFIG["paths"]`: List of prefiltered result CSVs
+- `FILE_EDDYPRO["path"]`: EddyPro CSV path
+- `FILE_PREFILTERED["paths"]`: Combined prefiltered result CSV
 - `SAVE_PATH`: Output filename
 - `JITTER`, `YLIM`, `DPI`: Plot styling
 - Event dates (same as above)
@@ -172,7 +180,7 @@ Generates `timelags_strategies_comparison.png`:
 ### Code Quality
 
 ```bash
-cd comparison_python_plot
+cd scripts/visualization
 ruff check .
 black --line-length 100 .
 ```
@@ -197,30 +205,33 @@ black --line-length 100 .
                     │ (Raw lags + PWBOPT flags)      │
                     └───────────────┬────────────────┘
                                     │
-                ┌───────────────────┼───────────────────┐
+                ┌───────────────────┬───────────────────┐
                 │                   │                   │
         ┌───────▼──────────┐  ┌──────▼──────────┐  ┌────▼────────────┐
-        │ plot.py          │  │ plot_comparison │  │ 02_tlag_compare │
-        │ (PWB vs Eddypro) │  │ _strategies.py  │  │ _pwbopt_*.R     │
-        │                  │  │ (Std vs Prefilter)  │                │
-        └───────┬──────────┘  └──────┬──────────┘  └────┬────────────┘
-                │                    │                   │
-        ┌───────▼──────────┐  ┌──────▼──────────┐  ┌────▼────────────┐
-        │ timelags.png     │  │ timelags_       │  │ output/         │
-        │ timelags.pdf     │  │ strategies_     │  │ tlag_results_   │
-        │ (EddyPro comp.)  │  │ comparison.png  │  │ prefiltered*.csv│
-        └──────────────────┘  └─────────────────┘  └─────────────────┘
+        │ plot.py          │  │ 02_tlag_compare │  │ plot_comparison │
+        │ (PWB vs Eddypro) │  │ _pwbopt_*.R     │  │ _strategies.py  │
+        │                  │  │ (Test pre-filter)   │ (EddyPro vs PWB)│
+        └───────┬──────────┘  └────┬─────────────┘  └────┬────────────┘
+                │                  │                     │
+        ┌───────▼──────────┐  ┌─────▼──────────────┐  ┌──▼─────────────┐
+        │ timelags.png     │  │ output/tlag_results│  │ timelags_      │
+        │ timelags.pdf     │  │ _prefiltered_all   │  │ strategies_    │
+        │ (PWB vs EddyPro) │  │ .csv (combined)    │  │ comparison.png │
+        │                  │  │ + per-part CSVs    │  │ (EddyPro vs    │
+        │                  │  │                    │  │  PWB pre-filt) │
+        └──────────────────┘  └────────────────────┘  └────────────────┘
 ```
 
 **Read-only inputs** (git-tracked):
 - Rotation-corrected wind/scalar data in `03-rotated_data_from_eddypro_level5_partN/`
 
 **Generated files** (git-ignored):
-- `output/tlag_results_part[1-7].csv` — Script 1 output
-- `output/tlag_results_prefiltered_part[1-7].csv` — Script 2 output
+- `output/tlag_results_part[1-7].csv` — Script 1 output (7 parts)
+- `output/tlag_results_prefiltered_all.csv` — Script 2 output (combined, both approaches)
+- `output/tlag_results_prefiltered_part[1-7].csv` — Script 2 output (per-part, reference)
 - `tlag_plots/*.pdf` — Diagnostic plots from script 1
-- `timelags.png`, `timelags.pdf` — Comparison plot (Option A)
-- `timelags_strategies_comparison.png` — Comparison plot (Option B)
+- `timelags.png`, `timelags.pdf` — Comparison plot (Option A: PWB vs EddyPro)
+- `timelags_strategies_comparison.png` — Comparison plot (Option B: EddyPro vs PWB pre-filtered)
 
 ---
 
@@ -240,14 +251,14 @@ black --line-length 100 .
 
 ### Prefiltered Output Columns
 
-Script 2 outputs `tlag_results_prefiltered_part*.csv` with columns for both approaches:
+Script 2 outputs `tlag_results_prefiltered_all.csv` (and per-part variants) with columns for both approaches:
 
-**Standard approach** (all lags, S1/S2/S3 applied directly):
-- `ch4_pwbopt_std` / `n2o_pwbopt_std` — Recommended lag
+**Standard approach** (all detected lags, S1/S2/S3 applied directly):
+- `ch4_pwbopt_std` / `n2o_pwbopt_std` — Recommended lag (baseline)
 - `ch4_flag_std` / `n2o_flag_std` — Flag (S1_optimal, S2_optimal, S3_unreliable)
 
-**Pre-filtered approach** (HDI > 1.0 s removed, then S1/S2/S3):
-- `ch4_pwbopt_prefilter` / `n2o_pwbopt_prefilter` — Recommended lag
+**Pre-filtered approach** (lags with HDI > 1.0 s removed, then S1/S2/S3):
+- `ch4_pwbopt_prefilter` / `n2o_pwbopt_prefilter` — Recommended lag (filtered variant)
 - `ch4_flag_prefilter` / `n2o_flag_prefilter` — Flag (S1_optimal, S2_optimal, S3_unreliable)
 
 **Original detection results** (shared by both approaches):
@@ -286,33 +297,32 @@ Bottom line: **Always use `*pwbopt_sec`, not the raw `*tlag_sec`.**
 - CM jumps erratically on weak-signal days → PWB smooths out spurious peaks
 - N2O KDE peaks narrower than CH4 → N2O has stronger, more stable signal
 
-#### Standard vs. Pre-filtered (plot_comparison_strategies.py)
+#### EddyPro vs. PWB Pre-filtered (plot_comparison_strategies.py)
 
-`timelags_strategies_comparison.png` compares the two S1/S2/S3 strategies:
-- **Left (a, c)**: Standard approach (all lags, blue)
-- **Right (b, d)**: Pre-filtered approach (HDI > 1.0 s removed, orange)
+`timelags_strategies_comparison.png` compares EddyPro's detection with the PWB pre-filtered approach:
+- **Left (a, c)**: EddyPro (CM) in blue
+- **Right (b, d)**: PWB pre-filtered (lags with HDI > 1.0 s removed) in orange
 
 **What to look for**:
-- Matching scatter points → pre-filtering made no difference
-- Orange gaps where blue has points → those lags had HDI > 1.0 s (filtered out)
-- Orange KDE peak narrower than blue → pre-filtering increased consensus
-- % reliable higher/lower for pre-filtered → indicates filtering impact
+- Close agreement between blue and orange clusters → both methods agree
+- Orange sparse in certain periods → pre-filtering removed those lags (high uncertainty)
+- Orange KDE peak sharper than blue → pre-filtering produces more consistent lags
+- Orange avoids spurious jumps that blue might make on weak-signal days
 
-**Interpreting differences**:
-- If plots look nearly identical: pre-filtering threshold too high (try lower)
-- If orange frequently disappears: threshold too low (try higher)
-- If orange becomes more stable: pre-filtering reducing spurious jumps (good)
-- If reliability % increases: more consistent lag estimates (depends on goal)
+**Interpreting patterns**:
+- If plots look very similar: pre-filtering threshold (1.0 s) is effective at removing only truly uncertain lags
+- If orange frequently disappears: threshold may be too aggressive; consider increasing it in script 2
+- If orange mode differs from blue: pre-filtering changed the consensus lag (evaluate which is more stable)
+- If orange peaks are narrower: pre-filtering increased internal consistency
 
 Expected patterns:
-- Both tracks (PWB and EddyPro) cluster around 1.7–2.0 s for most of the day.
-- They often track each other closely.
-- When PWB shows a S3_unreliable flag (wide HDI), it typically *doesn't* jump dramatically; instead, it stays near the prior good value. EddyPro might jump wildly on weak signal days; PWB doesn't, which is the point.
-- If PWB and EddyPro diverge significantly, check the corresponding HDI range. A wide HDI (>1 s) indicates PWB uncertainty; narrow HDI indicates PWB confidence and suggests EddyPro might be chasing noise.
+- Both methods cluster around 1.7–2.0 s for most of the day on strong-signal periods
+- EddyPro may jump erratically on weak-signal afternoons; PWB pre-filtered should stay stable
+- N2O (bottom panels) typically has narrower distributions than CH4 (stronger, more stable signal)
 
 Red flags:
-- If PWB lags cluster at implausible values (e.g., always −3 s), something's wrong with the input data or tube setup description.
-- If every single day has S3 flags, the signal is too weak; consider whether the analyzer settings or tube was changed during the campaign.
+- If PWB pre-filtered lags cluster at implausible values (e.g., always −3 s), check input data or analyzer setup
+- If pre-filtering removes >50% of lags, consider lowering the threshold (`hdi_prefilter_sec`)
 
 ---
 
@@ -342,13 +352,13 @@ Scripts 1 and 2 process one part at a time. To process all 7 parts:
 
 ```r
 # Option A: Run script manually 7 times, changing 'part' each time
-part <- 1; source("01_tlag_detection_pwb.R")
-part <- 2; source("01_tlag_detection_pwb.R")
+part <- 1; source("scripts/01_tlag_detection_pwb.R")
+part <- 2; source("scripts/01_tlag_detection_pwb.R")
 # ... etc
 
 # Option B: Wrap in a loop
 for (part in 1:7) {
-  source("01_tlag_detection_pwb.R")
+  source("scripts/01_tlag_detection_pwb.R")
   cat(sprintf("Part %d complete.\n", part))
 }
 ```
@@ -362,7 +372,7 @@ To compare multiple thresholds in script 2:
 ```r
 for (threshold in c(0.5, 0.75, 1.0, 1.5, 2.0)) {
   hdi_prefilter_sec <- threshold
-  source("02_tlag_compare_pwbopt_strategies.R")
+  source("scripts/02_tlag_compare_pwbopt_strategies.R")
   cat(sprintf("Threshold %.2f s complete.\n", threshold))
 }
 ```
@@ -402,8 +412,8 @@ FIG_H = 14 / 2.54          # Height in inches (line 130)
 
 **Plot.py says "file not found"**:
 - Ensure `output/tlag_results_part*.csv` files exist (run script 1 first)
-- Verify file paths in `FILE_CONFIG` (line 19)
-- Check working directory: script should run from `comparison_python_plot/` directory
+- Verify file paths in `FILE1` and `FILE2` (lines 19–42)
+- Check working directory: run script from `scripts/visualization/` directory
 
 **Prefiltered plot looks identical to standard**:
 - Pre-filter threshold may be too high
