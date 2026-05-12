@@ -1,0 +1,95 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# R
+.Rhistory
+.RData
+.Rapp.history
+.Rprofile
+*.Rproj
+.Rproj.user/
+renv/
+packrat/
+*_cache/
+*_files/
+
+# Virtual environments
+.venv
+venv/
+env/
+
+# IDE & Editor
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+.sublime-project
+.sublime-workspace
+*.iml
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Data files
+*.csv
+*.xlsx
+*.xls
+*.nc
+*.h5
+*.hdf5
+*.dat
+data/
+raw_data/
+input/
+output/
+results/
+figures/
+
+# Temporary/cache files
+*.tmp
+*.cache
+.cache/
+*.log
+.Rhistory.bak
+
+# Backup files
+*~
+*.bak
+*.orig
+
+# OS files
+.DS_Store
+Thumbs.db
+.fuse_hidden*
+
+# System/temp directories
+.AppleDouble
+.LSOverride
+$RECYCLE.BIN/
